@@ -23,6 +23,7 @@ if (navToggle && nav) {
   navToggle.addEventListener("click", () => {
     const open = nav.classList.toggle("is-open");
     navToggle.setAttribute("aria-expanded", String(open));
+    navToggle.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
     document.body.classList.toggle("nav-open", open);
   });
 
@@ -30,6 +31,7 @@ if (navToggle && nav) {
     if (event.target.closest("a")) {
       nav.classList.remove("is-open");
       navToggle.setAttribute("aria-expanded", "false");
+      navToggle.setAttribute("aria-label", "Open navigation");
       document.body.classList.remove("nav-open");
     }
   });
@@ -59,7 +61,26 @@ if (!prefersReduced) {
       hero.style.setProperty("--mx", x.toFixed(3));
       hero.style.setProperty("--my", y.toFixed(3));
     });
+    hero.addEventListener("pointerleave", () => {
+      hero.style.setProperty("--mx", "0");
+      hero.style.setProperty("--my", "0");
+    });
   }
+
+  document.querySelectorAll("[data-tilt]").forEach((card) => {
+    card.addEventListener("pointermove", (event) => {
+      const rect = card.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / rect.width - 0.5;
+      const y = (event.clientY - rect.top) / rect.height - 0.5;
+      card.style.setProperty("--rx", `${(-y * 4.5).toFixed(2)}deg`);
+      card.style.setProperty("--ry", `${(x * 5.5).toFixed(2)}deg`);
+    });
+
+    card.addEventListener("pointerleave", () => {
+      card.style.setProperty("--rx", "0deg");
+      card.style.setProperty("--ry", "0deg");
+    });
+  });
 }
 
 document.querySelectorAll("[data-magnetic]").forEach((button) => {
@@ -79,9 +100,11 @@ document.querySelectorAll("[data-drag-rail]").forEach((rail) => {
   let isDown = false;
   let startX = 0;
   let scrollLeft = 0;
+  let didDrag = false;
 
   rail.addEventListener("pointerdown", (event) => {
     isDown = true;
+    didDrag = false;
     rail.classList.add("is-dragging");
     rail.setPointerCapture(event.pointerId);
     startX = event.pageX - rail.offsetLeft;
@@ -90,8 +113,9 @@ document.querySelectorAll("[data-drag-rail]").forEach((rail) => {
 
   rail.addEventListener("pointermove", (event) => {
     if (!isDown) return;
-    event.preventDefault();
     const x = event.pageX - rail.offsetLeft;
+    if (Math.abs(x - startX) > 5) didDrag = true;
+    event.preventDefault();
     rail.scrollLeft = scrollLeft - (x - startX);
   });
 
@@ -103,6 +127,12 @@ document.querySelectorAll("[data-drag-rail]").forEach((rail) => {
   rail.addEventListener("pointerup", end);
   rail.addEventListener("pointercancel", end);
   rail.addEventListener("pointerleave", end);
+  rail.addEventListener("click", (event) => {
+    if (!didDrag) return;
+    event.preventDefault();
+    event.stopPropagation();
+    didDrag = false;
+  }, true);
 });
 
 const lightbox = document.querySelector("[data-lightbox]");
@@ -136,11 +166,18 @@ document.querySelectorAll("[data-filter]").forEach((button) => {
   button.addEventListener("click", () => {
     const group = button.closest("[data-filter-group]");
     const value = button.dataset.filter;
+    const status = document.querySelector("[data-filter-status]");
+    let visible = 0;
     group.querySelectorAll("[data-filter]").forEach((item) => item.classList.toggle("is-active", item === button));
     document.querySelectorAll("[data-project-card]").forEach((card) => {
       const show = value === "all" || card.dataset.category === value;
       card.hidden = !show;
+      if (show) visible += 1;
     });
+    if (status) {
+      const label = value === "all" ? "native project frames" : `${value} frames`;
+      status.textContent = `Showing ${visible} ${label}`;
+    }
   });
 });
 
