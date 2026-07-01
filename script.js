@@ -81,6 +81,28 @@ if (!prefersReduced) {
       card.style.setProperty("--ry", "0deg");
     });
   });
+
+  const parallaxItems = Array.from(document.querySelectorAll("[data-parallax]"));
+  let parallaxFrame = 0;
+  const updateParallax = () => {
+    parallaxFrame = 0;
+    const viewport = window.innerHeight || 1;
+    parallaxItems.forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      const progress = Math.max(-1, Math.min(1, (center - viewport / 2) / viewport));
+      item.style.setProperty("--parallax", progress.toFixed(3));
+    });
+  };
+  const requestParallax = () => {
+    if (parallaxFrame) return;
+    parallaxFrame = window.requestAnimationFrame(updateParallax);
+  };
+  if (parallaxItems.length) {
+    updateParallax();
+    window.addEventListener("scroll", requestParallax, { passive: true });
+    window.addEventListener("resize", requestParallax);
+  }
 }
 
 document.querySelectorAll("[data-magnetic]").forEach((button) => {
@@ -101,6 +123,11 @@ document.querySelectorAll("[data-drag-rail]").forEach((rail) => {
   let startX = 0;
   let scrollLeft = 0;
   let didDrag = false;
+  const updateRailProgress = () => {
+    const max = Math.max(1, rail.scrollWidth - rail.clientWidth);
+    rail.style.setProperty("--rail-progress", String(Math.min(1, rail.scrollLeft / max)));
+  };
+  updateRailProgress();
 
   rail.addEventListener("pointerdown", (event) => {
     isDown = true;
@@ -127,6 +154,7 @@ document.querySelectorAll("[data-drag-rail]").forEach((rail) => {
   rail.addEventListener("pointerup", end);
   rail.addEventListener("pointercancel", end);
   rail.addEventListener("pointerleave", end);
+  rail.addEventListener("scroll", updateRailProgress, { passive: true });
   rail.addEventListener("click", (event) => {
     if (!didDrag) return;
     event.preventDefault();
@@ -167,6 +195,7 @@ document.querySelectorAll("[data-filter]").forEach((button) => {
     const group = button.closest("[data-filter-group]");
     const value = button.dataset.filter;
     const status = document.querySelector("[data-filter-status]");
+    document.body.classList.add("is-filtering");
     let visible = 0;
     group.querySelectorAll("[data-filter]").forEach((item) => item.classList.toggle("is-active", item === button));
     document.querySelectorAll("[data-project-card]").forEach((card) => {
@@ -178,6 +207,7 @@ document.querySelectorAll("[data-filter]").forEach((button) => {
       const label = value === "all" ? "native project frames" : `${value} frames`;
       status.textContent = `Showing ${visible} ${label}`;
     }
+    window.setTimeout(() => document.body.classList.remove("is-filtering"), 260);
   });
 });
 
