@@ -1,6 +1,19 @@
 const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const loaderStartedAt = performance.now();
 
 document.documentElement.classList.add("js");
+
+const finishLoader = () => {
+  const delay = prefersReduced ? 0 : Math.max(0, 1050 - (performance.now() - loaderStartedAt));
+  window.setTimeout(() => document.documentElement.classList.add("is-loaded"), delay);
+};
+
+if (document.readyState === "complete") {
+  finishLoader();
+} else {
+  window.addEventListener("load", finishLoader, { once: true });
+  window.setTimeout(finishLoader, 2600);
+}
 
 const header = document.querySelector("[data-header]");
 const navToggle = document.querySelector("[data-nav-toggle]");
